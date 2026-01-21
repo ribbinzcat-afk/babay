@@ -1,6 +1,6 @@
 {
     "name": "Roleplay Phone UI",
-    "displayname": "📱 โทรศัพท์ของเบบี้",
+    "display_name": "📱 โทรศัพท์ของเบบี้",
     "version": "1.0.0",
     "author": "Robo & You",
     "description": "Adds an interactive smartphone UI that updates automatically based on AI response JSON data.",
