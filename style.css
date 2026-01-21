@@ -1,76 +1,100 @@
 @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500&display=swap');
 
-/* ปุ่มเปิดมือถือที่มุมขวาล่าง */
+/* ปุ่มเปิด-ปิดโทรศัพท์ (Floating Action Button) */
 #phone-toggle-btn {
     position: fixed;
     bottom: 20px;
     right: 20px;
     width: 60px;
     height: 60px;
-    background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+    background: #6c5ce7;
     border-radius: 50%;
     box-shadow: 0 4px 15px rgba(108, 92, 231, 0.4);
+    z-index: 9999;
+    cursor: pointer;
     display: flex;
     justify-content: center;
     align-items: center;
     font-size: 30px;
-    cursor: pointer;
-    z-index: 9999;
-    transition: transform 0.2s, box-shadow 0.2s;
-    user-select: none;
+    transition: transform 0.2s, background 0.2s;
+    border: 2px solid #fff;
 }
 
 #phone-toggle-btn:hover {
     transform: scale(1.1);
-    box-shadow: 0 6px 20px rgba(108, 92, 231, 0.6);
+    background: #5b4cc4;
 }
 
-/* ตัวเครื่องโทรศัพท์ */
+/* คอนเทนเนอร์หลักของโทรศัพท์ */
 #rp-phone-container {
     position: fixed;
-    bottom: 90px;
+    bottom: 90px; /* อยู่เหนือปุ่ม Toggle */
     right: 20px;
-    width: 320px;
-    height: 640px;
+    width: 350px;
+    height: 700px;
+    max-height: 80vh; /* ไม่ให้สูงเกินหน้าจอ */
     background: #f4f4f9;
     border-radius: 30px;
-    border: 10px solid #333;
+    border: 8px solid #333;
     box-shadow: 0 20px 50px rgba(0,0,0,0.3);
-    overflow: hidden;
     z-index: 9998;
+    overflow: hidden;
     font-family: 'Kanit', sans-serif;
-    transform: translateY(120%); /* ซ่อนไว้ข้างล่าง */
-    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    display: flex;
-    flex-direction: column;
+
+    /* เริ่มต้นซ่อนไว้ */
+    opacity: 0;
+    transform: translateY(20px) scale(0.9);
+    pointer-events: none;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-#rp-phone-container.visible {
-    transform: translateY(0);
+/* สถานะเปิดใช้งาน */
+#rp-phone-container.open {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: all;
 }
 
-/* ส่วนประกอบภายใน (ย่อมาจากอันเดิม) */
+/* --- Responsive Design สำหรับมือถือ --- */
+@media (max-width: 768px) {
+    #rp-phone-container {
+        width: 100% !important;
+        height: 100% !important;
+        max-height: 100vh !important;
+        bottom: 0 !important;
+        right: 0 !important;
+        border-radius: 0 !important;
+        border: none !important;
+    }
+
+    #phone-toggle-btn {
+        bottom: 15px;
+        right: 15px;
+        width: 50px;
+        height: 50px;
+        font-size: 24px;
+    }
+}
+
+/* --- องค์ประกอบภายใน (ย่อมา) --- */
 .rp-status-bar {
-    height: 25px;
+    height: 30px;
     background: rgba(255,255,255,0.9);
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 0 15px;
     font-size: 12px;
-    color: #333;
     border-bottom: 1px solid #eee;
 }
 
 .rp-screen {
-    flex: 1;
+    height: calc(100% - 30px);
     overflow-y: auto;
     position: relative;
-    background: #f4f4f9;
 }
 
-/* Home Screen Grid */
-.rp-home-grid {
+.rp-app-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 15px;
@@ -78,24 +102,29 @@
 }
 
 .rp-app-icon {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+}
+
+.rp-icon-box {
     width: 55px;
     height: 55px;
     background: #fff;
     border-radius: 12px;
     display: flex;
-    flex-direction: column;
     justify-content: center;
     align-items: center;
     font-size: 24px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-    cursor: pointer;
-    transition: transform 0.1s;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    transition: transform 0.2s;
 }
 
-.rp-app-icon:active { transform: scale(0.95); }
-.rp-app-label { font-size: 10px; margin-top: 4px; color: #333; text-align: center; }
+.rp-icon-box:hover { transform: scale(1.05); }
+.rp-app-name { font-size: 10px; margin-top: 5px; text-align: center; color: #333; }
 
-/* App Views (ซ้อนทับกัน) */
+/* หน้า App ต่างๆ */
 .rp-app-view {
     position: absolute;
     top: 0;
@@ -112,7 +141,7 @@
 
 .rp-app-view.active { transform: translateX(0); }
 
-.rp-app-header {
+.rp-header {
     padding: 15px;
     background: #f8f9fa;
     border-bottom: 1px solid #eee;
@@ -122,7 +151,7 @@
 }
 
 .rp-back-btn { margin-right: 10px; cursor: pointer; font-size: 18px; }
-.rp-app-content { flex: 1; padding: 15px; overflow-y: auto; }
+.rp-content { flex: 1; padding: 15px; overflow-y: auto; }
 
 /* Bank Style */
 .rp-bank-card {
@@ -130,31 +159,16 @@
     color: white;
     padding: 20px;
     border-radius: 15px;
-    margin-bottom: 20px;
-    box-shadow: 0 4px 15px rgba(108, 92, 231, 0.3);
+    box-shadow: 0 4px 10px rgba(108, 92, 231, 0.3);
 }
-.rp-balance { font-size: 28px; font-weight: 500; margin: 5px 0; }
 
-/* Tweet Style */
-.rp-tweet {
-    border-bottom: 1px solid #eee;
-    padding: 15px 0;
+/* Chat Style */
+.rp-msg {
+    padding: 8px 12px;
+    border-radius: 15px;
+    margin-bottom: 8px;
+    font-size: 14px;
+    max-width: 80%;
 }
-.rp-tweet-header { display: flex; align-items: center; margin-bottom: 5px; }
-.rp-avatar { width: 30px; height: 30px; border-radius: 50%; background: #dfe6e9; margin-right: 10px; }
-.rp-username { font-weight: 500; font-size: 14px; }
-.rp-handle { color: #636e72; font-size: 12px; margin-left: 5px; }
-.rp-tweet-content { font-size: 14px; line-height: 1.4; }
-
-/* Home Indicator */
-.rp-home-indicator {
-    height: 20px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background: #fff;
-    cursor: pointer;
-}
-.rp-home-bar { width: 100px; height: 4px; background: #333; border-radius: 2px; opacity: 0.2; }
-
-                          
+.rp-msg-in { background: #f1f0f0; align-self: flex-start; border-bottom-left-radius: 2px; }
+.rp-msg-out { background: #6c5ce7; color: white; align-self: flex-end; margin-left: auto; border-bottom-right-radius: 2px; }
