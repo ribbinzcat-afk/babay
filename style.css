@@ -1,0 +1,160 @@
+@import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500&display=swap');
+
+/* ปุ่มเปิดมือถือที่มุมขวาล่าง */
+#phone-toggle-btn {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+    border-radius: 50%;
+    box-shadow: 0 4px 15px rgba(108, 92, 231, 0.4);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 30px;
+    cursor: pointer;
+    z-index: 9999;
+    transition: transform 0.2s, box-shadow 0.2s;
+    user-select: none;
+}
+
+#phone-toggle-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 20px rgba(108, 92, 231, 0.6);
+}
+
+/* ตัวเครื่องโทรศัพท์ */
+#rp-phone-container {
+    position: fixed;
+    bottom: 90px;
+    right: 20px;
+    width: 320px;
+    height: 640px;
+    background: #f4f4f9;
+    border-radius: 30px;
+    border: 10px solid #333;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+    overflow: hidden;
+    z-index: 9998;
+    font-family: 'Kanit', sans-serif;
+    transform: translateY(120%); /* ซ่อนไว้ข้างล่าง */
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    display: flex;
+    flex-direction: column;
+}
+
+#rp-phone-container.visible {
+    transform: translateY(0);
+}
+
+/* ส่วนประกอบภายใน (ย่อมาจากอันเดิม) */
+.rp-status-bar {
+    height: 25px;
+    background: rgba(255,255,255,0.9);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 15px;
+    font-size: 12px;
+    color: #333;
+    border-bottom: 1px solid #eee;
+}
+
+.rp-screen {
+    flex: 1;
+    overflow-y: auto;
+    position: relative;
+    background: #f4f4f9;
+}
+
+/* Home Screen Grid */
+.rp-home-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+    padding: 20px;
+}
+
+.rp-app-icon {
+    width: 55px;
+    height: 55px;
+    background: #fff;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    font-size: 24px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    cursor: pointer;
+    transition: transform 0.1s;
+}
+
+.rp-app-icon:active { transform: scale(0.95); }
+.rp-app-label { font-size: 10px; margin-top: 4px; color: #333; text-align: center; }
+
+/* App Views (ซ้อนทับกัน) */
+.rp-app-view {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #fff;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    z-index: 10;
+}
+
+.rp-app-view.active { transform: translateX(0); }
+
+.rp-app-header {
+    padding: 15px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #eee;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+}
+
+.rp-back-btn { margin-right: 10px; cursor: pointer; font-size: 18px; }
+.rp-app-content { flex: 1; padding: 15px; overflow-y: auto; }
+
+/* Bank Style */
+.rp-bank-card {
+    background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+    color: white;
+    padding: 20px;
+    border-radius: 15px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 15px rgba(108, 92, 231, 0.3);
+}
+.rp-balance { font-size: 28px; font-weight: 500; margin: 5px 0; }
+
+/* Tweet Style */
+.rp-tweet {
+    border-bottom: 1px solid #eee;
+    padding: 15px 0;
+}
+.rp-tweet-header { display: flex; align-items: center; margin-bottom: 5px; }
+.rp-avatar { width: 30px; height: 30px; border-radius: 50%; background: #dfe6e9; margin-right: 10px; }
+.rp-username { font-weight: 500; font-size: 14px; }
+.rp-handle { color: #636e72; font-size: 12px; margin-left: 5px; }
+.rp-tweet-content { font-size: 14px; line-height: 1.4; }
+
+/* Home Indicator */
+.rp-home-indicator {
+    height: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #fff;
+    cursor: pointer;
+}
+.rp-home-bar { width: 100px; height: 4px; background: #333; border-radius: 2px; opacity: 0.2; }
+
+                          
