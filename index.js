@@ -1,40 +1,186 @@
-import { extension_settings } from "../../../extensions.js";
+// Phone UI Extension for SillyTavern
+// Created by Robo
 
-const extensionName = "PhoneUI";
+(function() {
+    // 1. HTML Structure (Phone + Button)
+    const phoneHTML = `
+    <div id="phone-toggle-btn" title="Toggle Phone">📱</div>
 
-// 1. สร้าง HTML โครงสร้างโทรศัพท์
-const phoneHTML = `
-<div id="rp-phone-container">
-    <div class="rp-status-bar">
-        <span id="rp-clock">12:00</span>
-        <span>🔋 100%</span>
-    </div>
-
-    <!-- Home Screen -->
-    <div class="rp-screen" id="rp-home-screen">
-        <div class="rp-home-grid">
-            <div class="rp-app-icon" onclick="openApp('rp-app-bank')">🏦<div class="rp-app-label">Bank</div></div>
-            <div class="rp-app-icon" onclick="openApp('rp-app-social')">🐦<div class="rp-app-label">Social</div></div>
-            <div class="rp-app-icon" onclick="openApp('rp-app-note')">📝<div class="rp-app-label">Notes</div></div>
+    <div id="rp-phone-container">
+        <div class="rp-status-bar">
+            <span id="rp-clock">12:00</span>
+            <span>🔋 100%</span>
         </div>
-    </div>
 
-    <!-- Bank App -->
-    <div class="rp-app-view" id="rp-app-bank">
-        <div class="rp-app-header"><span class="rp-back-btn" onclick="goHome()">❮</span> My Bank</div>
-        <div class="rp-app-content">
-            <div class="rp-bank-card">
-                <div style="font-size:12px; opacity:0.8;">Total Balance</div>
-                <div class="rp-balance">฿ <span id="data-balance">0.00</span></div>
-                <div style="font-size:12px; margin-top:10px;">**** **** **** 8899</div>
-            </div>
-            <div style="font-weight:500; color:#636e72; margin-bottom:10px;">Recent Transactions</div>
-            <div id="data-transactions">
-                <!-- รายการธุรกรรมจะถูกเติมที่นี่ -->
-                <div style="padding:10px; color:#aaa; text-align:center;">No transactions yet</div>
+        <!-- Home Screen -->
+        <div class="rp-screen" id="rp-home">
+            <div class="rp-app-grid">
+                <div class="rp-app-icon" onclick="openRpApp('rp-bank')">
+                    <div class="rp-icon-box">🏦</div><span class="rp-app-name">Bank</span>
+                </div>
+                <div class="rp-app-icon" onclick="openRpApp('rp-notes')">
+                    <div class="rp-icon-box">📝</div><span class="rp-app-name">Notes</span>
+                </div>
+                <div class="rp-app-icon" onclick="openRpApp('rp-social')">
+                    <div class="rp-icon-box">🐦</div><span class="rp-app-name">Social</span>
+                </div>
+                <div class="rp-app-icon" onclick="openRpApp('rp-chat')">
+                    <div class="rp-icon-box">💬</div><span class="rp-app-name">Chat</span>
+                </div>
             </div>
         </div>
+
+        <!-- Apps (Hidden by default) -->
+        <div class="rp-app-view" id="rp-bank">
+            <div class="rp-header"><span class="rp-back-btn" onclick="closeRpApp()">❮</span> Bank</div>
+            <div class="rp-content">
+                <div class="rp-bank-card">
+                    <div style="font-size:12px; opacity:0.8;">Balance</div>
+                    <div style="font-size:24px; font-weight:bold;">฿ <span id="data-balance">0.00</span></div>
+                </div>
+                <div style="margin-top:15px; font-weight:500; color:#666;">Recent</div>
+                <div id="data-transactions" style="font-size:13px; margin-top:10px;">- No Data -</div>
+            </div>
+        </div>
+
+        <div class="rp-app-view" id="rp-notes">
+            <div class="rp-header"><span class="rp-back-btn" onclick="closeRpApp()">❮</span> Notes</div>
+            <div class="rp-content">
+                <div style="background:#fff8c4; padding:10px; border-radius:8px; margin-bottom:15px;" id="data-thought">...</div>
+                <div style="font-weight:500;">To-Do</div>
+                <div id="data-todo" style="margin-top:5px;"></div>
+            </div>
+        </div>
+
+        <div class="rp-app-view" id="rp-social">
+            <div class="rp-header"><span class="rp-back-btn" onclick="closeRpApp()">❮</span> Feed</div>
+            <div class="rp-content" id="data-tweet">Loading feed...</div>
+        </div>
+
+        <div class="rp-app-view" id="rp-chat">
+            <div class="rp-header"><span class="rp-back-btn" onclick="closeRpApp()">❮</span> Messages</div>
+            <div class="rp-content" style="display:flex; flex-direction:column;" id="data-chat-history">
+                <div class="rp-msg rp-msg-in">Welcome to Chat!</div>
+            </div>
+        </div>
     </div>
+    `;
+
+    // 2. Inject HTML into SillyTavern
+    $(document).ready(function() {
+        $('body').append(phoneHTML);
+
+        // Toggle Logic
+        $('#phone-toggle-btn').on('click', function() {
+            $('#rp-phone-container').toggleClass('open');
+            // Change Icon based on state
+            if($('#rp-phone-container').hasClass('open')) {
+                $(this).html('❌'); // Close icon
+            } else {
+                $(this).html('📱'); // Phone icon
+            }
+        });
+
+        // App Navigation Logic (Global functions)
+        window.openRpApp = function(appId) {
+            $('#' + appId).addClass('active');
+        };
+        window.closeRpApp = function() {
+            $('.rp-app-view').removeClass('active');
+        };
+
+        // Clock Logic
+        setInterval(() => {
+            const now = new Date();
+            $('#rp-clock').text(now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0'));
+        }, 1000);
+    });
+
+    // 3. AI Message Interceptor (The Brain)
+    const onMessageReceived = (data) => {
+        if (!data || !data.message) return;
+
+        const text = data.message;
+        // Regex to find JSON block at the end
+        const jsonRegex = /```json\s*({[\s\S]*?})\s*```|({[\s\S]*?})$/;
+        const match = text.match(jsonRegex);
+
+        if (match) {
+            try {
+                // Try parsing the first or second group
+                const jsonStr = match[1] || match[2];
+                const uiData = JSON.parse(jsonStr);
+
+                console.log("[PhoneUI] Updating data:", uiData);
+
+                // Update UI Elements safely
+                if (uiData.balance) $('#data-balance').text(uiData.balance);
+                if (uiData.thought) $('#data-thought').text(uiData.thought);
+
+                if (uiData.transactions) {
+                    let html = '';
+                    uiData.transactions.forEach(t => html += `<div style="padding:5px 0; border-bottom:1px solid #eee;">${t}</div>`);
+                    $('#data-transactions').html(html);
+                }
+
+                if (uiData.todo) {
+                    let html = '';
+                    if(Array.isArray(uiData.todo)) {
+                         uiData.todo.forEach(t => html += `<div>☐ ${t}</div>`);
+                    } else {
+                         html = `<div>☐ ${uiData.todo}</div>`;
+                    }
+                    $('#data-todo').html(html);
+                }
+
+                if (uiData.tweet) $('#data-tweet').html(`<div style="border-bottom:1px solid #eee; padding:10px 0;"><b>Latest</b><br>${uiData.tweet}</div>`);
+
+            } catch (e) {
+                console.error("[PhoneUI] JSON Parse Error:", e);
+            }
+        }
+    };
+
+    // Register Extension in SillyTavern
+    // Note: SillyTavern extensions work by simply running the JS.
+    // We hook into the event bus if available, or just rely on the script running.
+    // For message interception, we hook into the global event source if possible,
+    // but the easiest way for extensions is usually watching the DOM or hooking `generation_after`.
+
+    // Hooking into SillyTavern's event system (if available)
+    if (window.eventSource) {
+        window.eventSource.on(event_types.MESSAGE_RECEIVED, (id) => {
+             // We need to fetch the message content.
+             // Since accessing internal context is hard, we scan the last message div.
+             // But for a cleaner approach, let's assume the user puts the JSON in the text.
+             // We can scan the latest message in the DOM.
+             setTimeout(() => {
+                 const lastMsg = $('.mes_text').last().text();
+                 onMessageReceived({message: lastMsg});
+             }, 500);
+        });
+    } else {
+        // Fallback: MutationObserver to watch for new messages
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.addedNodes.length) {
+                    const lastMsg = $('.mes_text').last().text();
+                    // Basic debounce/check could be added here
+                    onMessageReceived({message: lastMsg});
+                }
+            });
+        });
+
+        // Start observing the chat container once it exists
+        const checkChat = setInterval(() => {
+            const chat = document.getElementById('chat');
+            if (chat) {
+                observer.observe(chat, { childList: true, subtree: true });
+                clearInterval(checkChat);
+            }
+        }, 1000);
+    }
+})();    </div>
 
     <!-- Social App -->
     <div class="rp-app-view" id="rp-app-social">
