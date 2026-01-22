@@ -1,14 +1,16 @@
-// index.js
-import { extension_settings } from "../../../extensions.js";
-import { eventSource, event_types } from "../../../script.js";
+import { extension_settings, getContext, loadExtensionSettings } from "../../../extensions.js";
+import { saveSettingsDebounced, eventSource, event_types } from "../../../../script.js";
 
-const SETTING_KEY = "interactive_phone";
-let phoneContainer;
-let currentTimeInterval;
+const extensionName = "interactive-phone";
+const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
 
-// Default State
+// Default Settings & State
+const defaultSettings = {
+    enabled: true,
+    wallpaper: "https://images.unsplash.com/photo-1554147090-e1221a04a0bd?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80"
+};
+
 let phoneState = {
-    wallpaper: "url('https://images.unsplash.com/photo-1554147090-e1221a04a0bd?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80')", // Default abstract
     bankBalance: "5,000.00 ฿",
     tweets: [],
     messages: [],
@@ -25,37 +27,22 @@ let phoneState = {
 };
 
 // Regex to capture JSON from AI response
-// Expects format:  or just raw JSON block at end
 const DATA_REGEX = //i;
 
-function init() {
-    // Create UI
-    createPhoneUI();
-
-    // Add Menu Button
-    const menuBtn = document.createElement("div");
-    menuBtn.id = "phone-toggle-btn";
-    menuBtn.className = "fa-solid fa-mobile-screen-button";
-    menuBtn.title = "Open Phone";
-    menuBtn.style.cursor = "pointer";
-    menuBtn.onclick = togglePhone;
-
-    // Add to extension menu (Top Bar or Extensions list depending on ST version)
-    // For simplicity, appending to the extensions menu container if available, or body as floating
-    // Adjust selector based on your specific ST version layout
-    const extensionMenu = document.getElementById("extensionsMenu") || document.body;
-    // Better approach: Add to the extension list in UI
-
-    // Start Clock
-    startClock();
-
-    // Listen for AI Generation
-    eventSource.on(event_types.MESSAGE_RECEIVED, handleNewMessage);
-
-    console.log("Interactive Phone Extension Loaded");
+async function loadSettings() {
+    extension_settings[extensionName] = extension_settings[extensionName] || {};
+    if (Object.keys(extension_settings[extensionName]).length === 0) {
+        Object.assign(extension_settings[extensionName], defaultSettings);
+    }
+    // Load wallpaper from settings if available
+    if(extension_settings[extensionName].wallpaper){
+         // Update UI wallpaper logic here if needed initially
+    }
 }
 
 function createPhoneUI() {
+    // Check if UI already exists
+    if (document.getElementById('smart-phone-container')) return;
     const html = `
         <div id="smart-phone-container">
             <div id="phone-screen" style="background-image: ${phoneState.wallpaper}">
@@ -144,27 +131,15 @@ function createPhoneUI() {
         </div>
     `;
 
-    // Append to body
-    const div = document.createElement('div');
-    div.innerHTML = html;
-    document.body.appendChild(div);
+        $('body').append(html);
 
-    // Make global functions for onclick
-    window.openApp = (appName) => {
-        document.getElementById(`app-${appName}`).classList.add('open');
-    };
-
-    window.closeApp = (appName) => {
-        document.getElementById(`app-${appName}`).classList.remove('open');
-    };
-
-    window.closeAllApps = () => {
-        document.querySelectorAll('.app-window').forEach(el => el.classList.remove('open'));
-    };
-
+    // Bind Events using jQuery for consistency
+    window.openApp = (appName) => $(`#app-${appName}`).addClass('open');
+    window.closeApp = (appName) => $(`#app-${appName}`).removeClass('open');
+    window.closeAllApps = () => $('.app-window').removeClass('open');
     window.togglePhone = () => {
-        const p = document.getElementById('smart-phone-container');
-        p.style.display = p.style.display === 'none' ? 'block' : 'none';
+        const p = $('#smart-phone-container');
+        if (p.css('display') === 'none') p.show(); else p.hide();
     };
 }
 
@@ -178,70 +153,111 @@ function startClock() {
 }
 
 function handleNewMessage(mesId) {
-    // Retrieve the message content. (Implementation depends on ST version API, assuming getting text)
-    // This is a simplified fetch, you might need context.chat[mesId].mes
-    const context = SillyTavern.getContext();
-    const lastMsg = context.chat[context.chat.length - 1].mes;
+    const context = getContext();
+    // Safety check
+    if (!context.chat || context.chat.length === 0) return;
 
+    const lastMsg = context.chat[context.chat.length - 1].mes;
     const match = lastMsg.match(DATA_REGEX);
+
     if (match && match[1]) {
         try {
             const data = JSON.parse(match[1]);
             updatePhoneData(data);
         } catch (e) {
-            console.error("Failed to parse Phone JSON", e);
+            console.error(<q>"[Interactive Phone] Failed to parse JSON"</q>, e);
         }
     }
 }
 
 function updatePhoneData(data) {
-    // Update Wallpaper
     if(data.wallpaper) {
-        phoneState.wallpaper = `url('${data.wallpaper}')`;
-        document.getElementById('phone-screen').style.backgroundImage = phoneState.wallpaper;
+        $('#phone-screen').css('background-image', `url('${data.wallpaper}')`);
+        // Optional: Save wallpaper to settings so it persists
+        extension_settings[extensionName].wallpaper = data.wallpaper;
+        saveSettingsDebounced();
     }
 
-    // Update Bank
     if(data.bank) {
-        phoneState.bankBalance = data.bank;
-        document.getElementById('bank-balance').innerText = data.bank;
+        $('#bank-balance').text(data.bank);
     }
 
-    // Update Twitter
     if(data.twitter_new) {
         const tweetHtml = `
-            <div class="twitter-post">
-                <div style="font-weight:bold;">@User</div>
-                <div>${data.twitter_new}</div>
-            </div>`;
-        document.getElementById('twitter-feed').insertAdjacentHTML('afterbegin', tweetHtml);
+
+                @User
+                ${data.twitter_new}
+            `;
+        $('#twitter-feed').prepend(tweetHtml);
     }
 
-    // Update Messages
     if(data.message_new) {
-         const msgHtml = `<div class="message-bubble">${data.message_new}</div>`;
-         document.getElementById('message-list').insertAdjacentHTML('beforeend', msgHtml);
+         const msgHtml = `${data.message_new}`;
+         $('#message-list').append(msgHtml);
     }
 
-    // Update Notes
     if(data.note_new) {
-         const noteHtml = `<div class="message-bubble" style="background:#fff3cd;">${data.note_new}</div>`;
-         document.getElementById('note-list').insertAdjacentHTML('afterbegin', noteHtml);
+         const noteHtml = `${data.note_new}`;
+         $('#note-list').prepend(noteHtml);
     }
 
-    // Update Logs
     if(data.log) {
-        if(data.log.location) document.getElementById('log-loc').innerText = data.log.location;
-        if(data.log.date) document.getElementById('log-date').innerText = data.log.date;
-        if(data.log.time) document.getElementById('log-time').innerText = data.log.time;
-        if(data.log.weather) document.getElementById('log-weather').innerText = data.log.weather;
-        if(data.log.clothes) document.getElementById('log-clothes').innerText = data.log.clothes;
-        if(data.log.event) document.getElementById('log-event').innerText = data.log.event;
-        if(data.log.summary) document.getElementById('log-summary').innerText = data.log.summary;
+        if(data.log.location) $('#log-loc').text(data.log.location);
+        if(data.log.date) $('#log-date').text(data.log.date);
+        if(data.log.time) $('#log-time').text(data.log.time);
+        if(data.log.weather) $('#log-weather').text(data.log.weather);
+        if(data.log.clothes) $('#log-clothes').text(data.log.clothes);
+        if(data.log.event) $('#log-event').text(data.log.event);
+        if(data.log.summary) $('#log-summary').text(data.log.summary);
     }
 }
 
-// Register Extension
-jQuery(document).ready(function () {
-    init();
+// Main Entry Point
+jQuery(async () => {
+    // Load Settings
+    await loadSettings();
+
+    // Create UI
+    createPhoneUI();
+
+    // Add Toggle Button to Extension Menu (Example location)
+    // Check if button already exists to prevent duplicates
+    if ($('#phone-toggle-btn').length === 0) {
+        const menuBtn = $('').attr({
+            id: 'phone-toggle-btn',
+            title: 'Open Phone'
+        }).css({
+            cursor: 'pointer',
+            margin: '0 10px',
+            fontSize: '1.2em'
+        }).on('click', window.togglePhone);
+
+        // Append to a suitable container, e.g., #extensionsMenu or a specific toolbar
+        // For now, let's float it or append to body for visibility if menu not found
+        const targetContainer = $('#extensionsMenu');
+        if(targetContainer.length) {
+            targetContainer.append(menuBtn);
+        } else {
+            // Fallback: Fixed floating button
+            menuBtn.css({
+                position: 'fixed',
+                top: '10px',
+                right: '100px',
+                zIndex: 2001,
+                color: 'white',
+                background: 'rgba(0,0,0,0.5)',
+                padding: '10px',
+                borderRadius: '50%'
+            });
+            $('body').append(menuBtn);
+        }
+    }
+
+    // Start Clock
+    startClock();
+
+    // Listen for AI Message
+    eventSource.on(event_types.MESSAGE_RECEIVED, handleNewMessage);
+
+    console.log(`${extensionName} loaded successfully.`);
 });
