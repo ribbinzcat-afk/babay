@@ -1,300 +1,247 @@
-// Phone UI Extension for SillyTavern
-// Created by Robo
+// index.js
+import { extension_settings } from <q>"../../../extensions.js"</q>;
+import { eventSource, event_types } from <q>"../../../script.js"</q>;
 
-(function() {
-    // 1. HTML Structure (Phone + Button)
-    const phoneHTML = `
-    <div id="phone-toggle-btn" title="Toggle Phone">📱</div>
+const SETTING_KEY = <q>"interactive_phone"</q>;
+let phoneContainer;
+let currentTimeInterval;
 
-    <div id="rp-phone-container">
-        <div class="rp-status-bar">
-            <span id="rp-clock">12:00</span>
-            <span>🔋 100%</span>
-        </div>
+// Default State
+let phoneState = {
+    wallpaper: <q>"url('https://images.unsplash.com/photo-1554147090-e1221a04a0bd?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80')"</q>, // Default abstract
+    bankBalance: <q>"5,000.00 ฿"</q>,
+    tweets: [],
+    messages: [],
+    notes: [],
+    logs: {
+        location: <q>"Unknown"</q>,
+        date: <q>"Unknown"</q>,
+        time: <q>"Unknown"</q>,
+        weather: <q>"Unknown"</q>,
+        clothes: <q>"Casual"</q>,
+        event: <q>"None"</q>,
+        summary: <q>"No data yet."</q>
+    }
+};
 
-        <!-- Home Screen -->
-        <div class="rp-screen" id="rp-home">
-            <div class="rp-app-grid">
-                <div class="rp-app-icon" onclick="openRpApp('rp-bank')">
-                    <div class="rp-icon-box">🏦</div><span class="rp-app-name">Bank</span>
+// Regex to capture JSON from AI response
+// Expects format:  or just raw JSON block at end
+const DATA_REGEX = //i;
+
+function init() {
+    // Create UI
+    createPhoneUI();
+
+    // Add Menu Button
+    const menuBtn = document.createElement(<q>"div"</q>);
+    menuBtn.id = <q>"phone-toggle-btn"</q>;
+    menuBtn.className = <q>"fa-solid fa-mobile-screen-button"</q>;
+    menuBtn.title = <q>"Open Phone"</q>;
+    menuBtn.style.cursor = <q>"pointer"</q>;
+    menuBtn.onclick = togglePhone;
+
+    // Add to extension menu (Top Bar or Extensions list depending on ST version)
+    // For simplicity, appending to the extensions menu container if available, or body as floating
+    // Adjust selector based on your specific ST version layout
+    const extensionMenu = document.getElementById(<q>"extensionsMenu"</q>) || document.body;
+    // Better approach: Add to the extension list in UI
+
+    // Start Clock
+    startClock();
+
+    // Listen for AI Generation
+    eventSource.on(event_types.MESSAGE_RECEIVED, handleNewMessage);
+
+    console.log(<q>"Interactive Phone Extension Loaded"</q>);
+}
+
+function createPhoneUI() {
+    const html = `
+        <div id="smart-phone-container">
+            <div id="phone-screen" style="background-image: ${phoneState.wallpaper}">
+                <div class="status-bar">
+                    <span id="phone-clock">12:00</span>
+                    <span><i class="fa-solid fa-wifi"></i> <i class="fa-solid fa-battery-full"></i> 100%</span>
                 </div>
-                <div class="rp-app-icon" onclick="openRpApp('rp-notes')">
-                    <div class="rp-icon-box">📝</div><span class="rp-app-name">Notes</span>
+
+                <div class="app-grid">
+                    <div class="app-item" onclick="openApp('bank')">
+                        <div class="app-icon" style="color: #2ecc71"><i class="fa-solid fa-building-columns"></i></div>
+                        <div class="app-label">Bank</div>
+                    </div>
+                    <div class="app-item" onclick="openApp('twitter')">
+                        <div class="app-icon" style="color: #1da1f2"><i class="fa-brands fa-twitter"></i></div>
+                        <div class="app-label">Twitter</div>
+                    </div>
+                    <div class="app-item" onclick="openApp('messages')">
+                        <div class="app-icon" style="color: #27ae60"><i class="fa-solid fa-comment"></i></div>
+                        <div class="app-label">Message</div>
+                    </div>
+                    <div class="app-item" onclick="openApp('notes')">
+                        <div class="app-icon" style="color: #f1c40f"><i class="fa-solid fa-note-sticky"></i></div>
+                        <div class="app-label">Notes</div>
+                    </div>
+                    <div class="app-item" onclick="openApp('settings')">
+                        <div class="app-icon" style="color: #95a5a6"><i class="fa-solid fa-gear"></i></div>
+                        <div class="app-label">System Log</div>
+                    </div>
                 </div>
-                <div class="rp-app-icon" onclick="openRpApp('rp-social')">
-                    <div class="rp-icon-box">🐦</div><span class="rp-app-name">Social</span>
+
+                <!-- App Windows -->
+                <div id="app-bank" class="app-window">
+                    <div class="app-header"><i class="fa-solid fa-chevron-left back-btn" onclick="closeApp('bank')"></i> Mobile Banking</div>
+                    <div class="app-content">
+                        <div class="bank-card">
+                            <div>Savings Account</div>
+                            <h2 id="bank-balance">${phoneState.bankBalance}</h2>
+                            <div>**** **** **** 1234</div>
+                        </div>
+                        <div>Recent Transactions</div>
+                        <hr>
+                        <div style="margin-top:10px; color:#888; text-align:center;">No recent history</div>
+                    </div>
                 </div>
-                <div class="rp-app-icon" onclick="openRpApp('rp-chat')">
-                    <div class="rp-icon-box">💬</div><span class="rp-app-name">Chat</span>
+
+                <div id="app-twitter" class="app-window">
+                    <div class="app-header"><i class="fa-solid fa-chevron-left back-btn" onclick="closeApp('twitter')"></i> Twitter</div>
+                    <div class="app-content" id="twitter-feed">
+                        <!-- Tweets go here -->
+                    </div>
                 </div>
+
+                <div id="app-messages" class="app-window">
+                    <div class="app-header"><i class="fa-solid fa-chevron-left back-btn" onclick="closeApp('messages')"></i> Messages</div>
+                    <div class="app-content" id="message-list">
+                        <!-- Messages go here -->
+                    </div>
+                </div>
+
+                <div id="app-notes" class="app-window">
+                    <div class="app-header"><i class="fa-solid fa-chevron-left back-btn" onclick="closeApp('notes')"></i> Notes</div>
+                    <div class="app-content" id="note-list">
+                        <!-- Notes go here -->
+                    </div>
+                </div>
+
+                <div id="app-settings" class="app-window">
+                    <div class="app-header"><i class="fa-solid fa-chevron-left back-btn" onclick="closeApp('settings')"></i> System Log</div>
+                    <div class="app-content">
+                        <h3>Current Status</h3>
+                        <div class="log-entry"><strong>Location:</strong> <span id="log-loc">Unknown</span></div>
+                        <div class="log-entry"><strong>Date:</strong> <span id="log-date">Unknown</span></div>
+                        <div class="log-entry"><strong>Time:</strong> <span id="log-time">Unknown</span></div>
+                        <div class="log-entry"><strong>Weather:</strong> <span id="log-weather">Unknown</span></div>
+                        <div class="log-entry"><strong>Clothes:</strong> <span id="log-clothes">Unknown</span></div>
+                        <div class="log-entry"><strong>Event:</strong> <span id="log-event">None</span></div>
+                        <hr>
+                        <h4>Summary</h4>
+                        <p id="log-summary" style="font-size:12px; color:#555;">...</p>
+                    </div>
+                </div>
+
+                <div class="home-indicator" onclick="closeAllApps()"></div>
             </div>
         </div>
-
-        <!-- Apps (Hidden by default) -->
-        <div class="rp-app-view" id="rp-bank">
-            <div class="rp-header"><span class="rp-back-btn" onclick="closeRpApp()">❮</span> Bank</div>
-            <div class="rp-content">
-                <div class="rp-bank-card">
-                    <div style="font-size:12px; opacity:0.8;">Balance</div>
-                    <div style="font-size:24px; font-weight:bold;">฿ <span id="data-balance">0.00</span></div>
-                </div>
-                <div style="margin-top:15px; font-weight:500; color:#666;">Recent</div>
-                <div id="data-transactions" style="font-size:13px; margin-top:10px;">- No Data -</div>
-            </div>
-        </div>
-
-        <div class="rp-app-view" id="rp-notes">
-            <div class="rp-header"><span class="rp-back-btn" onclick="closeRpApp()">❮</span> Notes</div>
-            <div class="rp-content">
-                <div style="background:#fff8c4; padding:10px; border-radius:8px; margin-bottom:15px;" id="data-thought">...</div>
-                <div style="font-weight:500;">To-Do</div>
-                <div id="data-todo" style="margin-top:5px;"></div>
-            </div>
-        </div>
-
-        <div class="rp-app-view" id="rp-social">
-            <div class="rp-header"><span class="rp-back-btn" onclick="closeRpApp()">❮</span> Feed</div>
-            <div class="rp-content" id="data-tweet">Loading feed...</div>
-        </div>
-
-        <div class="rp-app-view" id="rp-chat">
-            <div class="rp-header"><span class="rp-back-btn" onclick="closeRpApp()">❮</span> Messages</div>
-            <div class="rp-content" style="display:flex; flex-direction:column;" id="data-chat-history">
-                <div class="rp-msg rp-msg-in">Welcome to Chat!</div>
-            </div>
-        </div>
-    </div>
     `;
 
-    // 2. Inject HTML into SillyTavern
-    $(document).ready(function() {
-        $('body').append(phoneHTML);
+    // Append to body
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    document.body.appendChild(div);
 
-        // Toggle Logic
-        $('#phone-toggle-btn').on('click', function() {
-            $('#rp-phone-container').toggleClass('open');
-            // Change Icon based on state
-            if($('#rp-phone-container').hasClass('open')) {
-                $(this).html('❌'); // Close icon
-            } else {
-                $(this).html('📱'); // Phone icon
-            }
-        });
-
-        // App Navigation Logic (Global functions)
-        window.openRpApp = function(appId) {
-            $('#' + appId).addClass('active');
-        };
-        window.closeRpApp = function() {
-            $('.rp-app-view').removeClass('active');
-        };
-
-        // Clock Logic
-        setInterval(() => {
-            const now = new Date();
-            $('#rp-clock').text(now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0'));
-        }, 1000);
-    });
-
-    // 3. AI Message Interceptor (The Brain)
-    const onMessageReceived = (data) => {
-        if (!data || !data.message) return;
-
-        const text = data.message;
-        // Regex to find JSON block at the end
-        const jsonRegex = /```json\s*({[\s\S]*?})\s*```|({[\s\S]*?})$/;
-        const match = text.match(jsonRegex);
-
-        if (match) {
-            try {
-                // Try parsing the first or second group
-                const jsonStr = match[1] || match[2];
-                const uiData = JSON.parse(jsonStr);
-
-                console.log("[PhoneUI] Updating data:", uiData);
-
-                // Update UI Elements safely
-                if (uiData.balance) $('#data-balance').text(uiData.balance);
-                if (uiData.thought) $('#data-thought').text(uiData.thought);
-
-                if (uiData.transactions) {
-                    let html = '';
-                    uiData.transactions.forEach(t => html += `<div style="padding:5px 0; border-bottom:1px solid #eee;">${t}</div>`);
-                    $('#data-transactions').html(html);
-                }
-
-                if (uiData.todo) {
-                    let html = '';
-                    if(Array.isArray(uiData.todo)) {
-                         uiData.todo.forEach(t => html += `<div>☐ ${t}</div>`);
-                    } else {
-                         html = `<div>☐ ${uiData.todo}</div>`;
-                    }
-                    $('#data-todo').html(html);
-                }
-
-                if (uiData.tweet) $('#data-tweet').html(`<div style="border-bottom:1px solid #eee; padding:10px 0;"><b>Latest</b><br>${uiData.tweet}</div>`);
-
-            } catch (e) {
-                console.error("[PhoneUI] JSON Parse Error:", e);
-            }
-        }
+    // Make global functions for onclick
+    window.openApp = (appName) => {
+        document.getElementById(`app-${appName}`).classList.add('open');
     };
 
-    // Register Extension in SillyTavern
-    // Note: SillyTavern extensions work by simply running the JS.
-    // We hook into the event bus if available, or just rely on the script running.
-    // For message interception, we hook into the global event source if possible,
-    // but the easiest way for extensions is usually watching the DOM or hooking `generation_after`.
+    window.closeApp = (appName) => {
+        document.getElementById(`app-${appName}`).classList.remove('open');
+    };
 
-    // Hooking into SillyTavern's event system (if available)
-    if (window.eventSource) {
-        window.eventSource.on(event_types.MESSAGE_RECEIVED, (id) => {
-             // We need to fetch the message content.
-             // Since accessing internal context is hard, we scan the last message div.
-             // But for a cleaner approach, let's assume the user puts the JSON in the text.
-             // We can scan the latest message in the DOM.
-             setTimeout(() => {
-                 const lastMsg = $('.mes_text').last().text();
-                 onMessageReceived({message: lastMsg});
-             }, 500);
-        });
-    } else {
-        // Fallback: MutationObserver to watch for new messages
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                if (mutation.addedNodes.length) {
-                    const lastMsg = $('.mes_text').last().text();
-                    // Basic debounce/check could be added here
-                    onMessageReceived({message: lastMsg});
-                }
-            });
-        });
+    window.closeAllApps = () => {
+        document.querySelectorAll('.app-window').forEach(el => el.classList.remove('open'));
+    };
 
-        // Start observing the chat container once it exists
-        const checkChat = setInterval(() => {
-            const chat = document.getElementById('chat');
-            if (chat) {
-                observer.observe(chat, { childList: true, subtree: true });
-                clearInterval(checkChat);
-            }
-        }, 1000);
-    }
-})();    </div>
+    window.togglePhone = () => {
+        const p = document.getElementById('smart-phone-container');
+        p.style.display = p.style.display === 'none' ? 'block' : 'none';
+    };
+}
 
-    <!-- Social App -->
-    <div class="rp-app-view" id="rp-app-social">
-        <div class="rp-app-header"><span class="rp-back-btn" onclick="goHome()">❮</span> Feed</div>
-        <div class="rp-app-content" id="data-tweets">
-            <!-- ทวิตจะถูกเติมที่นี่ -->
-            <div style="padding:20px; color:#aaa; text-align:center;">Feed is empty</div>
-        </div>
-    </div>
-
-    <!-- Note App -->
-    <div class="rp-app-view" id="rp-app-note">
-        <div class="rp-app-header"><span class="rp-back-btn" onclick="goHome()">❮</span> Notes</div>
-        <div class="rp-app-content">
-            <div style="font-weight:500; color:#636e72;">To-Do List</div>
-            <div id="data-todo" style="margin-top:10px;">
-                <!-- To-Do จะถูกเติมที่นี่ -->
-            </div>
-        </div>
-    </div>
-
-    <div class="rp-home-indicator" onclick="goHome()"><div class="rp-home-bar"></div></div>
-</div>
-
-<div id="phone-toggle-btn">📱</div>
-`;
-
-// 2. ฟังก์ชันหลักสำหรับโหลด Extension
-jQuery(async () => {
-    // ใส่ HTML ลงไปใน Body
-    $('body').append(phoneHTML);
-
-    // ฟังก์ชันเปิด/ปิดมือถือ
-    $('#phone-toggle-btn').on('click', () => {
-        $('#rp-phone-container').toggleClass('visible');
-    });
-
-    // ฟังก์ชันนาฬิกา
+function startClock() {
     setInterval(() => {
         const now = new Date();
-        $('#rp-clock').text(now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0'));
+        const timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+        const clockEl = document.getElementById('phone-clock');
+        if(clockEl) clockEl.innerText = timeStr;
     }, 1000);
+}
 
-    // Expose functions to window scope (เพื่อให้ HTML เรียกใช้ได้)
-    window.openApp = (appId) => { $(`#${appId}`).addClass('active'); };
-    window.goHome = () => { $('.rp-app-view').removeClass('active'); };
+function handleNewMessage(mesId) {
+    // Retrieve the message content. (Implementation depends on ST version API, assuming getting text)
+    // This is a simplified fetch, you might need context.chat[mesId].mes
+    const context = SillyTavern.getContext();
+    const lastMsg = context.chat[context.chat.length - 1].mes;
 
-    console.log(`${extensionName} Loaded!`);
-});
-
-// 3. ฟังก์ชันดักจับข้อความจาก AI (The Interceptor)
-// SillyTavern จะเรียก event นี้เมื่อได้รับข้อความใหม่
-eventSource.on(event_types.MESSAGE_RECEIVED, (data) => {
-    const message = data.message.mes; // ข้อความที่ AI ตอบมา
-
-    // Regex ค้นหา JSON Block ท้ายข้อความ
-    // รูปแบบ: ```json { ... } ``` หรือแค่ { ... } ท้ายสุด
-    const jsonRegex = /```json\s*({[\s\S]*?})\s*```|({[\s\S]*?})$/;
-    const match = message.match(jsonRegex);
-
-    if (match) {
+    const match = lastMsg.match(DATA_REGEX);
+    if (match && match[1]) {
         try {
-            // ดึง JSON String ออกมา (กลุ่มที่ 1 หรือ 2)
-            const jsonStr = match[1] || match[2];
-            const uiData = JSON.parse(jsonStr);
-
-            console.log("PhoneUI Update:", uiData);
-
-            // อัปเดตข้อมูลตาม Key ที่ส่งมา
-            if (uiData.balance) {
-                $('#data-balance').text(uiData.balance);
-            }
-
-            if (uiData.transactions && Array.isArray(uiData.transactions)) {
-                let html = '';
-                uiData.transactions.forEach(t => {
-                    const color = t.amount.startsWith('-') ? '#ff7675' : '#00b894';
-                    html += `<div style="display:flex; justify-content:space-between; padding:12px 0; border-bottom:1px solid #f0f0f0;">
-                        <span>${t.desc}</span><span style="color:${color}">${t.amount}</span>
-                    </div>`;
-                });
-                $('#data-transactions').html(html);
-            }
-
-            if (uiData.tweets && Array.isArray(uiData.tweets)) {
-                let html = '';
-                uiData.tweets.forEach(t => {
-                    html += `<div class="rp-tweet">
-                        <div class="rp-tweet-header">
-                            <div class="rp-avatar"></div>
-                            <div><span class="rp-username">${t.user}</span><span class="rp-handle">@${t.handle}</span></div>
-                        </div>
-                        <div class="rp-tweet-content">${t.text}</div>
-                    </div>`;
-                });
-                $('#data-tweets').html(html);
-            }
-
-            if (uiData.todo && Array.isArray(uiData.todo)) {
-                let html = '';
-                uiData.todo.forEach(item => {
-                    html += `<div style="padding:10px; background:#fff8c4; margin-bottom:5px; border-radius:5px;">◻️ ${item}</div>`;
-                });
-                $('#data-todo').html(html);
-            }
-
-            // แจ้งเตือนว่าอัปเดตแล้ว (สั่นปุ่ม)
-            $('#phone-toggle-btn').css('transform', 'scale(1.2)');
-            setTimeout(() => $('#phone-toggle-btn').css('transform', ''), 200);
-
+            const data = JSON.parse(match[1]);
+            updatePhoneData(data);
         } catch (e) {
-            console.error("PhoneUI JSON Parse Error:", e);
+            console.error(<q>"Failed to parse Phone JSON"</q>, e);
         }
     }
-});
+}
 
-                            
+function updatePhoneData(data) {
+    // Update Wallpaper
+    if(data.wallpaper) {
+        phoneState.wallpaper = `url('${data.wallpaper}')`;
+        document.getElementById('phone-screen').style.backgroundImage = phoneState.wallpaper;
+    }
+
+    // Update Bank
+    if(data.bank) {
+        phoneState.bankBalance = data.bank;
+        document.getElementById('bank-balance').innerText = data.bank;
+    }
+
+    // Update Twitter
+    if(data.twitter_new) {
+        const tweetHtml = `
+            <div class="twitter-post">
+                <div style="font-weight:bold;">@User</div>
+                <div>${data.twitter_new}</div>
+            </div>`;
+        document.getElementById('twitter-feed').insertAdjacentHTML('afterbegin', tweetHtml);
+    }
+
+    // Update Messages
+    if(data.message_new) {
+         const msgHtml = `<div class="message-bubble">${data.message_new}</div>`;
+         document.getElementById('message-list').insertAdjacentHTML('beforeend', msgHtml);
+    }
+
+    // Update Notes
+    if(data.note_new) {
+         const noteHtml = `<div class="message-bubble" style="background:#fff3cd;">${data.note_new}</div>`;
+         document.getElementById('note-list').insertAdjacentHTML('afterbegin', noteHtml);
+    }
+
+    // Update Logs
+    if(data.log) {
+        if(data.log.location) document.getElementById('log-loc').innerText = data.log.location;
+        if(data.log.date) document.getElementById('log-date').innerText = data.log.date;
+        if(data.log.time) document.getElementById('log-time').innerText = data.log.time;
+        if(data.log.weather) document.getElementById('log-weather').innerText = data.log.weather;
+        if(data.log.clothes) document.getElementById('log-clothes').innerText = data.log.clothes;
+        if(data.log.event) document.getElementById('log-event').innerText = data.log.event;
+        if(data.log.summary) document.getElementById('log-summary').innerText = data.log.summary;
+    }
+}
+
+// Register Extension
+jQuery(document).ready(function () {
+    init();
+});
