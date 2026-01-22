@@ -1,26 +1,26 @@
 // index.js
-import { extension_settings } from <q>"../../../extensions.js"</q>;
-import { eventSource, event_types } from <q>"../../../script.js"</q>;
+import { extension_settings } from "../../../extensions.js";
+import { eventSource, event_types } from "../../../script.js";
 
-const SETTING_KEY = <q>"interactive_phone"</q>;
+const SETTING_KEY = "interactive_phone";
 let phoneContainer;
 let currentTimeInterval;
 
 // Default State
 let phoneState = {
-    wallpaper: <q>"url('https://images.unsplash.com/photo-1554147090-e1221a04a0bd?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80')"</q>, // Default abstract
-    bankBalance: <q>"5,000.00 ฿"</q>,
+    wallpaper: "url('https://images.unsplash.com/photo-1554147090-e1221a04a0bd?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80')", // Default abstract
+    bankBalance: "5,000.00 ฿",
     tweets: [],
     messages: [],
     notes: [],
     logs: {
-        location: <q>"Unknown"</q>,
-        date: <q>"Unknown"</q>,
-        time: <q>"Unknown"</q>,
-        weather: <q>"Unknown"</q>,
-        clothes: <q>"Casual"</q>,
-        event: <q>"None"</q>,
-        summary: <q>"No data yet."</q>
+        location: "Unknown",
+        date: "Unknown",
+        time: "Unknown",
+        weather: "Unknown",
+        clothes: "Casual",
+        event: "None",
+        summary: "No data yet."
     }
 };
 
@@ -33,17 +33,17 @@ function init() {
     createPhoneUI();
 
     // Add Menu Button
-    const menuBtn = document.createElement(<q>"div"</q>);
-    menuBtn.id = <q>"phone-toggle-btn"</q>;
-    menuBtn.className = <q>"fa-solid fa-mobile-screen-button"</q>;
-    menuBtn.title = <q>"Open Phone"</q>;
-    menuBtn.style.cursor = <q>"pointer"</q>;
+    const menuBtn = document.createElement("div");
+    menuBtn.id = "phone-toggle-btn";
+    menuBtn.className = "fa-solid fa-mobile-screen-button";
+    menuBtn.title = "Open Phone";
+    menuBtn.style.cursor = "pointer";
     menuBtn.onclick = togglePhone;
 
     // Add to extension menu (Top Bar or Extensions list depending on ST version)
     // For simplicity, appending to the extensions menu container if available, or body as floating
     // Adjust selector based on your specific ST version layout
-    const extensionMenu = document.getElementById(<q>"extensionsMenu"</q>) || document.body;
+    const extensionMenu = document.getElementById("extensionsMenu") || document.body;
     // Better approach: Add to the extension list in UI
 
     // Start Clock
@@ -52,7 +52,7 @@ function init() {
     // Listen for AI Generation
     eventSource.on(event_types.MESSAGE_RECEIVED, handleNewMessage);
 
-    console.log(<q>"Interactive Phone Extension Loaded"</q>);
+    console.log("Interactive Phone Extension Loaded");
 }
 
 function createPhoneUI() {
@@ -189,7 +189,7 @@ function handleNewMessage(mesId) {
             const data = JSON.parse(match[1]);
             updatePhoneData(data);
         } catch (e) {
-            console.error(<q>"Failed to parse Phone JSON"</q>, e);
+            console.error("Failed to parse Phone JSON", e);
         }
     }
 }
