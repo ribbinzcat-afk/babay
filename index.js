@@ -1,15 +1,9 @@
-// index.js
-import { extension_settings, getContext, loadExtensionSettings } from <q>"../../../extensions.js"</q>;
-import { saveSettingsDebounced, eventSource, event_types } from <q>"../../../../script.js"</q>;
+import { eventSource, event_types } from <q>"../../../../script.js"</q>;
 
+// Simple setup without complex setting loading to avoid AbortError
 const extensionName = <q>"interactive-phone"</q>;
 
-// Default Settings & State
-const defaultSettings = {
-    enabled: true,
-    wallpaper: <q>"https://images.unsplash.com/photo-1554147090-e1221a04a0bd?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80"</q>
-};
-
+// Default State
 let phoneState = {
     bankBalance: <q>"5,000.00 ฿"</q>,
     tweets: [],
@@ -188,25 +182,17 @@ const phoneStyles = `
     }
 `;
 
-async function loadSettings() {
-    extension_settings[extensionName] = extension_settings[extensionName] || {};
-    if (Object.keys(extension_settings[extensionName]).length === 0) {
-        Object.assign(extension_settings[extensionName], defaultSettings);
-    }
-}
-
 function injectStyles() {
     if ($('#interactive-phone-styles').length === 0) {
-        $('<style>')
+        $('')
             .attr('id', 'interactive-phone-styles')
-            .text(phoneStyles)
+            .text(phoneStyles) // ใส่ตัวแปร phoneStyles ที่มี CSS เต็มๆ
             .appendTo('head');
     }
 }
 
 function createPhoneUI() {
     if ($('#smart-phone-container').length) return;
-
     const html = `
         <div id="smart-phone-container">
             <div id="phone-screen" style="background-image: url('${phoneState.wallpaper}')">
