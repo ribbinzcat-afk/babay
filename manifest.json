@@ -1,8 +1,9 @@
 {
     "name": "Roleplay Phone UI",
     "display_name": "📱 โทรศัพท์ของเบบี้",
+    "requires": [],
     "version": "1.0.0",
-    "author": "Robo & You",
+    "author": "Silver & Baby",
     "description": "Adds an interactive smartphone UI that updates automatically based on AI response JSON data.",
     "js": "index.js",
     "css": "style.css"
