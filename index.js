@@ -211,7 +211,7 @@ jQuery(async () => {
             color: 'var(--smart-theme-body-color, #ccc)'
         }).on('click', window.togglePhone);
 
-        const targetContainer = $('#extensionsMenu');
+        const targetContainer = $('#extensions_settings');
         if(targetContainer.length) targetContainer.append(menuBtn);
         else $('body').append(menuBtn.css({position:'fixed', top:'10px', right:'100px', zIndex:2001, background:'rgba(0,0,0,0.5)', padding:'10px', borderRadius:'50%'}));
     }
